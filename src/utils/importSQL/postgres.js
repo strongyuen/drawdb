@@ -9,7 +9,7 @@ const affinity = {
   ),
   [DB.GENERIC]: new Proxy(
     {
-      INT: "INTEGER",
+      INTEGER: "INT",
       MEDIUMINT: "INTEGER",
       BIT: "BOOLEAN",
     },
@@ -23,7 +23,7 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
   const types = [];
   const enums = [];
 
-  ast.forEach((e) => {
+  const parseSingleStatement = (e) => {
     if (e.type === "create") {
       if (e.keyword === "table") {
         const table = {};
@@ -120,7 +120,7 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
               const endFieldId = tables[endTableId].fields.findIndex(
                 (f) => f.name === endField,
               );
-              if (endField === -1) return;
+              if (endFieldId === -1) return;
 
               const startFieldId = table.fields.findIndex(
                 (f) => f.name === startField,
@@ -190,7 +190,7 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
             const endFieldId = tables[endTableId].fields.findIndex(
               (f) => f.name === endField,
             );
-            if (endField === -1) return;
+            if (endFieldId === -1) return;
 
             const startFieldId = table.fields.findIndex(
               (f) => f.name === startField,
@@ -245,6 +245,33 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
             values: e.create_definitions.value.map((x) => x.value),
           };
           enums.push(newEnum);
+        } else if (Array.isArray(e.create_definitions)) {
+          const type = {
+            name: e.name.name,
+            fields: [],
+          };
+          e.create_definitions.forEach((d) => {
+            const field = {};
+            if (d.resource === "column") {
+              field.name = d.column.column.expr.value;
+
+              let type = d.definition.dataType;
+              if (!dbToTypes[diagramDb][type]) {
+                type = affinity[diagramDb][type];
+              }
+              field.type = type;
+            }
+            if (d.definition["length"]) {
+              if (d.definition.scale) {
+                field.size = d.definition["length"] + "," + d.definition.scale;
+              } else {
+                field.size = d.definition["length"];
+              }
+            }
+
+            type.fields.push(field);
+          });
+          types.push(type);
         }
       }
     } else if (e.type === "alter") {
@@ -255,11 +282,13 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
         ) {
           const relationship = {};
           const startTable = e.table[0].table;
-          const startField = expr.create_definitions.definition[0].column;
+          const startField =
+            expr.create_definitions.definition[0].column.expr.value;
           const endTable =
             expr.create_definitions.reference_definition.table[0].table;
           const endField =
-            expr.create_definitions.reference_definition.definition[0].column;
+            expr.create_definitions.reference_definition.definition[0].column
+              .expr.value;
           let updateConstraint = "No action";
           let deleteConstraint = "No action";
           expr.create_definitions.reference_definition.on_action.forEach(
@@ -287,7 +316,7 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
           const endFieldId = tables[endTableId].fields.findIndex(
             (f) => f.name === endField,
           );
-          if (endField === -1) return;
+          if (endFieldId === -1) return;
 
           const startFieldId = tables[startTableId].fields.findIndex(
             (f) => f.name === startField,
@@ -315,7 +344,13 @@ export function fromPostgres(ast, diagramDb = DB.GENERIC) {
         }
       });
     }
-  });
+  };
+
+  if (Array.isArray(ast)) {
+    ast.forEach((e) => parseSingleStatement(e));
+  } else {
+    parseSingleStatement(ast);
+  }
 
   relationships.forEach((r, i) => (r.id = i));
 
