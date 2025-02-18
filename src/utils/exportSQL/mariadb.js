@@ -1,4 +1,4 @@
-import { exportFieldComment, parseDefault } from "./shared";
+import { parseDefault } from "./shared";
 
 import { dbToTypes } from "../../data/datatypes";
 
@@ -6,14 +6,12 @@ export function toMariaDB(diagram) {
   return `${diagram.tables
     .map(
       (table) =>
-        `${
-          table.comment === "" ? "" : `/* ${table.comment} */\n`
-        }CREATE OR REPLACE TABLE \`${table.name}\` (\n${table.fields
+        `CREATE OR REPLACE TABLE \`${table.name}\` (\n${table.fields
           .map(
             (field) =>
-              `${exportFieldComment(field.comment)}\t\`${
+              `\t\`${
                 field.name
-              }\` ${field.type}${field.unsigned ? " UNSIGNED" : ""}${field.notNull ? " NOT NULL" : ""}${
+              }\` ${field.type}${field.values ? "(" + field.values.map((value) => "'" + value + "'").join(", ") + ")" : ""}${field.unsigned ? " UNSIGNED" : ""}${field.notNull ? " NOT NULL" : ""}${
                 field.increment ? " AUTO_INCREMENT" : ""
               }${field.unique ? " UNIQUE" : ""}${
                 field.default !== ""
@@ -24,7 +22,7 @@ export function toMariaDB(diagram) {
                 !dbToTypes[diagram.database][field.type].hasCheck
                   ? ""
                   : ` CHECK(${field.check})`
-              }`,
+              }${field.comment ? ` COMMENT '${field.comment}'` : ""}`,
           )
           .join(",\n")}${
           table.fields.filter((f) => f.primary).length > 0
@@ -33,7 +31,7 @@ export function toMariaDB(diagram) {
                 .map((f) => `\`${f.name}\``)
                 .join(", ")})`
             : ""
-        }\n);${`\n${table.indices
+        }\n)${table.comment ? ` COMMENT='${table.comment}'` : ""};${`\n${table.indices
           .map(
             (i) =>
               `\nCREATE ${i.unique ? "UNIQUE " : ""}INDEX \`${

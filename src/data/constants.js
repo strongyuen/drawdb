@@ -1,5 +1,3 @@
-import i18n from "../i18n/i18n";
-
 export const tableThemes = [
   "#f03c3c",
   "#ff4f81",
@@ -31,9 +29,9 @@ export const tableFieldHeight = 36;
 export const tableColorStripHeight = 7;
 
 export const Cardinality = {
-  ONE_TO_ONE: i18n.t("one_to_one"),
-  ONE_TO_MANY: i18n.t("one_to_many"),
-  MANY_TO_ONE: i18n.t("many_to_one"),
+  ONE_TO_ONE: "one_to_one",
+  ONE_TO_MANY: "one_to_many",
+  MANY_TO_ONE: "many_to_one",
 };
 
 export const Constraint = {
@@ -77,6 +75,7 @@ export const State = {
   SAVED: 2,
   LOADING: 3,
   ERROR: 4,
+  FAILED_TO_LOAD: 5,
 };
 
 export const MODAL = {
@@ -91,6 +90,7 @@ export const MODAL = {
   IMPORT_SRC: 8,
   TABLE_WIDTH: 9,
   LANGUAGE: 10,
+  SHARE: 11,
 };
 
 export const STATUS = {

@@ -9,7 +9,7 @@ const affinity = {
   ),
   [DB.GENERIC]: new Proxy(
     {
-      INT: "INTEGER",
+      INTEGER: "INT",
       TINYINT: "SMALLINT",
       MEDIUMINT: "INTEGER",
       BIT: "BOOLEAN",
@@ -131,7 +131,7 @@ export function fromMSSQL(ast, diagramDb = DB.GENERIC) {
               const endFieldId = tables[endTableId].fields.findIndex(
                 (f) => f.name === endField,
               );
-              if (endField === -1) return;
+              if (endFieldId === -1) return;
 
               const startFieldId = table.fields.findIndex(
                 (f) => f.name === startField,
@@ -235,7 +235,7 @@ export function fromMSSQL(ast, diagramDb = DB.GENERIC) {
           const endFieldId = tables[endTableId].fields.findIndex(
             (f) => f.name === endField,
           );
-          if (endField === -1) return;
+          if (endFieldId === -1) return;
 
           const startFieldId = tables[startTableId].fields.findIndex(
             (f) => f.name === startField,

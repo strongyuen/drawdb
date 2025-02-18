@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
   IconCaretdown,
   IconChevronRight,
@@ -9,6 +9,7 @@ import {
   IconUndo,
   IconRedo,
   IconEdit,
+  IconShareStroked,
 } from "@douyinfe/semi-icons";
 import { Link, useNavigate } from "react-router-dom";
 import icon from "../../assets/icon_dark_64.png";
@@ -70,6 +71,8 @@ import { exportSQL } from "../../utils/exportSQL";
 import { databases } from "../../data/databases";
 import { jsonToMermaid } from "../../utils/exportAs/mermaid";
 import { isRtl } from "../../i18n/utils/rtl";
+import { jsonToDocumentation } from "../../utils/exportAs/documentation";
+import { IdContext } from "../Workspace";
 
 export default function ControlPanel({
   diagramId,
@@ -112,6 +115,7 @@ export default function ControlPanel({
   const { selectedElement, setSelectedElement } = useSelect();
   const { transform, setTransform } = useTransform();
   const { t, i18n } = useTranslation();
+  const { setGistId } = useContext(IdContext);
   const navigate = useNavigate();
 
   const invertLayout = (component) =>
@@ -781,6 +785,7 @@ export default function ControlPanel({
               setEnums([]);
               setUndoStack([]);
               setRedoStack([]);
+              setGistId("");
             })
             .catch(() => Toast.error(t("oops_smth_went_wrong")));
         },
@@ -1053,6 +1058,26 @@ export default function ControlPanel({
                 subjectAreas: areas,
                 database: database,
                 title: title,
+              });
+              setExportData((prev) => ({
+                ...prev,
+                data: result,
+                extension: "md",
+              }));
+            },
+          },
+          {
+            readme: () => {
+              setModal(MODAL.CODE);
+              const result = jsonToDocumentation({
+                tables: tables,
+                relationships: relationships,
+                notes: notes,
+                subjectAreas: areas,
+                database: database,
+                title: title,
+                ...(databases[database].hasTypes && { types: types }),
+                ...(databases[database].hasEnums && { enums: enums }),
               });
               setExportData((prev) => ({
                 ...prev,
@@ -1355,8 +1380,25 @@ export default function ControlPanel({
 
   return (
     <>
-      {layout.header && header()}
-      {layout.toolbar && toolbar()}
+      <div>
+        {layout.header && (
+          <div className="flex justify-between items-center me-7">
+            {header()}
+            {window.name.split(" ")[0] !== "t" && (
+              <Button
+                type="primary"
+                className="text-base me-2 pe-6 ps-5 py-[18px] rounded-md"
+                size="default"
+                icon={<IconShareStroked />}
+                onClick={() => setModal(MODAL.SHARE)}
+              >
+                {t("share")}
+              </Button>
+            )}
+          </div>
+        )}
+        {layout.toolbar && toolbar()}
+      </div>
       <Modal
         modal={modal}
         exportData={exportData}
@@ -1562,6 +1604,8 @@ export default function ControlPanel({
         return t("saving");
       case State.ERROR:
         return t("failed_to_save");
+      case State.FAILED_TO_LOAD:
+        return t("failed_to_load");
       default:
         return "";
     }
@@ -1579,7 +1623,7 @@ export default function ControlPanel({
               width={54}
               src={icon}
               alt="logo"
-              className="ms-8 min-w-[54px]"
+              className="ms-7 min-w-[54px]"
             />
           </Link>
           <div className="ms-1 mt-1">

@@ -857,9 +857,8 @@ const postgresTypesBase = {
       return field.default.length <= field.size;
     },
     hasCheck: true,
-    isSized: true,
+    isSized: false,
     hasPrecision: false,
-    defaultSize: 65535,
     hasQuotes: true,
   },
   BYTEA: {
@@ -876,7 +875,19 @@ const postgresTypesBase = {
   DATE: {
     type: "DATE",
     checkDefault: (field) => {
-      return /^\d{4}-\d{2}-\d{2}$/.test(field.default);
+      const specialValues = [
+        "epoch",
+        "infinity",
+        "-infinity",
+        "now",
+        "today",
+        "tomorrow",
+        "yesterday",
+      ];
+      return (
+        /^\d{4}-\d{2}-\d{2}$/.test(field.default) ||
+        specialValues.includes(field.default.toLowerCase())
+      );
     },
     hasCheck: false,
     isSized: false,
@@ -886,7 +897,25 @@ const postgresTypesBase = {
   TIME: {
     type: "TIME",
     checkDefault: (field) => {
-      return /^(?:[01]?\d|2[0-3]):[0-5]?\d:[0-5]?\d$/.test(field.default);
+      const specialValues = ["now", "allballs"];
+      return (
+        /^(?:[01]?\d|2[0-3]):[0-5]?\d:[0-5]?\d$/.test(field.default) ||
+        specialValues.includes(field.default.toLowerCase())
+      );
+    },
+    hasCheck: false,
+    isSized: false,
+    hasPrecision: false,
+    hasQuotes: true,
+  },
+  TIMETZ: {
+    type: "TIMETZ",
+    checkDefault: (field) => {
+      const specialValues = ["now", "allballs"];
+      return (
+        /^(?:[01]?\d|2[0-3]):[0-5]?\d:[0-5]?\d([+-]\d{2}:\d{2})?$/.test(field.default) ||
+        specialValues.includes(field.default.toLowerCase())
+      );
     },
     hasCheck: false,
     isSized: false,
@@ -896,15 +925,23 @@ const postgresTypesBase = {
   TIMESTAMP: {
     type: "TIMESTAMP",
     checkDefault: (field) => {
-      if (field.default.toUpperCase() === "CURRENT_TIMESTAMP") {
-        return true;
-      }
-      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(field.default)) {
-        return false;
-      }
       const content = field.default.split(" ");
       const date = content[0].split("-");
-      return parseInt(date[0]) >= 1970 && parseInt(date[0]) <= 2038;
+      const specialValues = [
+        "epoch",
+        "infinity",
+        "-infinity",
+        "now",
+        "today",
+        "tomorrow",
+        "yesterday",
+        "current_timestamp",
+      ];
+      return (
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(field.default) ||
+        (parseInt(date[0]) >= 1970 && parseInt(date[0]) <= 2038) ||
+        specialValues.includes(field.default.toLowerCase())
+      );
     },
     hasCheck: false,
     isSized: false,
@@ -914,11 +951,20 @@ const postgresTypesBase = {
   TIMESTAMPTZ: {
     type: "TIMESTAMPTZ",
     checkDefault: (field) => {
-      if (field.default.toUpperCase() === "CURRENT_TIMESTAMP") {
-        return true;
-      }
-      return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})?$/.test(
-        field.default,
+      const specialValues = [
+        "epoch",
+        "infinity",
+        "-infinity",
+        "now",
+        "today",
+        "tomorrow",
+        "yesterday",
+        "current_timestamp",
+      ];
+      return (
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})?$/.test(
+          field.default,
+        ) || specialValues.includes(field.default.toLowerCase())
       );
     },
     hasCheck: false,
